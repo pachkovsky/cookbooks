@@ -2,6 +2,6 @@
 
 check process sidekiq
   with pidfile <%= pid_file %>
-  start program = "/bin/su - <%= @deploy[:user] %> -c 'cd <%= @deploy[:current_path] %> && bundle exec sidekiq -C config/sidekiq.yml'" with timeout 90 seconds
+  start program = "/bin/su - <%= @deploy[:user] %> -c 'cd <%= @deploy[:current_path] %> && bundle exec sidekiq -C config/sidekiq.yml -c <%= @node[:sidekiq][:concurrency] %>'" with timeout 90 seconds
   stop  program = "/bin/su - <%= @deploy[:user] %> -c 'kill -s TERM `cat <%= pid_file %>`'" with timeout 90 seconds
   group sidekiq_<%= @application %>_group
