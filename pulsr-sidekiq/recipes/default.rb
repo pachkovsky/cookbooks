@@ -11,6 +11,12 @@ node[:deploy].each do |application, deploy|
       deploy: deploy,
       application: application
     )
-    notifies :restart, 'service[monit]'
+    notifies :restart, "service[monit]", :immediately
+  end
+
+  execute "restart Server" do
+    command "sudo monit restart -g sidekiq_#{application}_group"
+    action :run
   end
 end
+
