@@ -127,6 +127,29 @@ define :pulsr_deploy do
               deploy[:database][:host].present?
             end
           end.run_action(:create)
+        elsif deploy[:application_type] == 'aws-flow-ruby'
+          OpsWorks::RailsConfiguration.bundle(application, node[:deploy][application], release_path)
+        elsif deploy[:application_type] == 'php'
+          template "#{node[:deploy][application][:deploy_to]}/shared/config/opsworks.php" do
+            cookbook 'php'
+            source 'opsworks.php.erb'
+            mode '0660'
+            owner node[:deploy][application][:user]
+            group node[:deploy][application][:group]
+            variables(
+              :database => node[:deploy][application][:database],
+              :memcached => node[:deploy][application][:memcached],
+              :layers => node[:opsworks][:layers],
+              :stack_name => node[:opsworks][:stack][:name]
+            )
+            only_if do
+              File.exists?("#{node[:deploy][application][:deploy_to]}/shared/config")
+            end
+          end
+        elsif deploy[:application_type] == 'nodejs'
+          if deploy[:auto_npm_install_on_deploy]
+            OpsWorks::NodejsConfiguration.npm_install(application, node[:deploy][application], release_path, node[:opsworks_nodejs][:npm_install_options])
+          end
         end
 
         node[:deploy].each do |application, deploy|
@@ -149,6 +172,26 @@ define :pulsr_deploy do
   ruby_block "change HOME back to /root after source checkout" do
     block do
       ENV['HOME'] = "/root"
+    end
+  end
+
+  if deploy[:application_type] == 'rails' && node[:opsworks][:instance][:layers].include?('rails-app')
+    case node[:opsworks][:rails_stack][:name]
+
+    when 'apache_passenger'
+      passenger_web_app do
+        application application
+        deploy deploy
+      end
+
+    when 'nginx_unicorn'
+      unicorn_web_app do
+        application application
+        deploy deploy
+      end
+
+    else
+      raise "Unsupport Rails stack"
     end
   end
 
