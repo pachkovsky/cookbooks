@@ -158,7 +158,7 @@ define :pulsr_deploy do
             owner deploy[:user]
             group deploy[:group]
             mode '0660'
-            content OpsWorks::Escape.escape_double_quotes(deploy[:environment_variables]).map{|key, value| "#{key}=#{value}"}.join("\n")
+            content OpsWorks::Escape.escape_double_quotes(deploy[:environment_variables]).merge('RAILS_ENV' => deploy[:rails_env]).map{|key, value| "#{key}=#{value}"}.join("\n")
             action :create
           end
         end
